@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagamento confirmado - TaskbarHeroBot</title>
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0f0f17;
+    color: #f0f0f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+    text-align: center;
+  }
+  h1 { font-size: 1.8em; }
+  .card {
+    background: #1b1b29;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 480px;
+    margin-top: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .serial {
+    font-size: 1.6em;
+    font-weight: bold;
+    color: #7c8cff;
+    background: #11111c;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+    letter-spacing: 1px;
+    user-select: all;
+  }
+  button {
+    background: #7c8cff;
+    color: #11111c;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1em;
+  }
+  button:hover { background: #97a4ff; }
+  .hint { color: #999; font-size: 0.9em; margin-top: 20px; }
+  .spinner { color: #999; margin-top: 20px; }
+</style>
+</head>
+<body>
+  <h1>Pagamento confirmado!</h1>
+  <div class="card">
+    <div id="loading" class="spinner">Gerando seu serial, aguarde alguns segundos...</div>
+    <div id="result" style="display:none">
+      <p>Copie o serial abaixo e cole no campo "Serial" do TaskbarHeroBot, depois clique em "Ativar licenca":</p>
+      <div class="serial" id="serialText">---</div>
+      <button onclick="copySerial()">Copiar serial</button>
+    </div>
+    <div id="error" style="display:none; color:#ff8080">
+      Nao foi possivel gerar o serial automaticamente. Entre em contato informando o pagamento.
+    </div>
+  </div>
+  <p class="hint">Guarde esse serial — ele vincula a licenca a primeira maquina que voce ativar.</p>
+
+<script>
+  const API_BASE = "https://taskbarherobot-license.betinhocarpi.workers.dev";
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+
+  async function pollSerial(attempts) {
+    if (!sessionId) {
+      showError();
+      return;
+    }
+    try {
+      const res = await fetch(API_BASE + "/serial?session_id=" + encodeURIComponent(sessionId));
+      const data = await res.json();
+      if (data.ok && data.serial) {
+        showSerial(data.serial);
+        return;
+      }
+    } catch (e) {}
+
+    if (attempts > 0) {
+      setTimeout(() => pollSerial(attempts - 1), 2000);
+    } else {
+      showError();
+    }
+  }
+
+  function showSerial(serial) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("result").style.display = "block";
+    document.getElementById("serialText").textContent = serial;
+  }
+
+  function showError() {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("error").style.display = "block";
+  }
+
+  function copySerial() {
+    const text = document.getElementById("serialText").textContent;
+    navigator.clipboard.writeText(text);
+  }
+
+  pollSerial(10); // tenta por ~20 segundos
+</script>
+</body>
+</html>
